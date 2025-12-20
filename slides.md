@@ -231,7 +231,7 @@ sequenceDiagram
 
 # TLS Certificate Flow
 
-## Public Certificates (Let's Encrypt)
+<!-- ## Public Certificates (Let's Encrypt) -->
 
 ```mermaid
 sequenceDiagram
@@ -244,7 +244,7 @@ sequenceDiagram
     participant Client as Client
     
     Note over Dev,Ingress: Certificate Request Flow
-    Dev->>K8s: Create Ingress with<br/>cert-manager.io/cluster-issuer:<br/>letsencrypt-cloudflare
+    Dev->>K8s: Create Ingress with tls
     K8s->>CertMgr: Certificate CRD detected
     CertMgr->>LE: ACME Challenge Request
     LE->>CertMgr: DNS-01 Challenge
@@ -260,7 +260,7 @@ sequenceDiagram
     Ingress->>Client: TLS Response<br/>(Valid Let's Encrypt cert)
 ```
 
-## Internal Certificates (Self-Signed CA)
+<!-- ## Internal Certificates (Self-Signed CA)
 
 ```mermaid
 sequenceDiagram
@@ -273,7 +273,7 @@ sequenceDiagram
     participant Client as Client
     
     Note over Dev,Ingress: Internal Certificate Flow
-    Dev->>K8s: Create Certificate CRD<br/>or Ingress with<br/>cert-manager.io/cluster-issuer:<br/>internal-ca
+    Dev->>K8s: Create Certificate tls-selfsign
     K8s->>CertMgr: Certificate request
     CertMgr->>CA: Sign certificate request
     CA->>CertMgr: Signed certificate<br/>(self-signed)
@@ -283,7 +283,7 @@ sequenceDiagram
     Note over Client,Ingress: HTTPS Connection
     Client->>Ingress: HTTPS Request<br/>(internal.domain.local)
     Ingress->>Client: TLS Response<br/>(Self-signed cert,<br/>requires CA trust)
-```
+``` -->
 
 ---
 
@@ -335,6 +335,10 @@ sequenceDiagram
 - Интеграция с Vault, Forgejo, Nexus, Harbor, Boundary
 - Группы: `devops` (admin), `support` (read-only)
 
+---
+
+# Идентификация и безопасность
+
 ## Vault
 
 - HashiCorp Vault для управления секретами
@@ -357,6 +361,10 @@ sequenceDiagram
 - Periodic refresh секретов
 - Webhook для validation
 
+---
+
+# Идентификация и безопасность
+
 ## Boundary
 
 - HashiCorp Boundary для безопасного доступа к инфраструктуре
@@ -366,6 +374,10 @@ sequenceDiagram
 - Controller и Worker архитектура
 - PostgreSQL для хранения состояния
 - Интеграция с OpenLDAP через Vault OIDC
+
+---
+
+# Идентификация и безопасность
 
 ## Kyverno
 
@@ -422,15 +434,13 @@ graph TB
 
 ---
 
-# LDAP Authentication Sequence
+## Direct LDAP Authentication
 
 ```mermaid
 sequenceDiagram
     participant User as User
     participant App as Application<br/>(Forgejo/Nexus)
     participant LDAP as OpenLDAP Server
-    participant Vault as HashiCorp Vault
-    participant OIDCApp as OIDC App<br/>(Harbor/Grafana/ArgoCD/Boundary)
     
     Note over User,App: Direct LDAP Authentication
     User->>App: Login (username/password)
@@ -440,6 +450,18 @@ sequenceDiagram
     LDAP->>App: Return user groups (devops/support)
     App->>App: Map groups to roles
     App->>User: Access granted with appropriate permissions
+```
+
+---
+
+##### Vault OIDC Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant OIDCApp as OIDC App<br/>(Harbor/Grafana/ArgoCD/Boundary)
+    participant Vault as HashiCorp Vault<br/>OIDC Provider
+    participant LDAP as OpenLDAP Server
     
     Note over User,OIDCApp: Vault OIDC Authentication Flow
     User->>OIDCApp: Access request
@@ -456,7 +478,7 @@ sequenceDiagram
 
 ---
 
-# Boundary Access Flow
+### Boundary Access Flow
 
 ```mermaid
 sequenceDiagram
@@ -528,6 +550,10 @@ sequenceDiagram
 - AppProjects для организации
 - Web UI + CLI
 - High Availability mode
+
+---
+
+# CI/CD платформа
 
 ## Renovate
 
@@ -673,7 +699,7 @@ graph TB
 
 # Зависимости и интеграции
 
-## Граф зависимостей
+## Граф зависимостей (часть 1)
 
 ```
 Базовая инфраструктура
@@ -697,7 +723,15 @@ graph TB
 │   ├─→ ArgoCD (OIDC)
 │   ├─→ Boundary (OIDC)
 │   └─→ External Secrets Operator (K8s Auth)
-│
+```
+
+---
+
+# Зависимости и интеграции
+
+## Граф зависимостей (часть 2)
+
+```
 ├─→ PostgreSQL
 │     ↓
 │   ├─→ Grafana
@@ -864,6 +898,12 @@ graph TB
 - Централизованная аутентификация (LDAP + Vault)
 - Policy enforcement (Kyverno)
 - Secret management (ESO + Vault)
+
+---
+
+# Заключение
+
+## Преимущества
 
 ### 📈 Масштабируемость
 - Load Balancing

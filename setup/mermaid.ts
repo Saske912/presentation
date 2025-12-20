@@ -6,9 +6,6 @@ export default defineMermaidSetup(() => {
     themeVariables: {
       // Dark theme colors
       primaryColor: '#1e293b',
-      primaryTextColor: '#f1f5f9',
-      primaryBorderColor: '#3b82f6',
-      lineColor: '#8b5cf6',
       secondaryColor: '#0f172a',
       tertiaryColor: '#334155',
       
@@ -20,6 +17,7 @@ export default defineMermaidSetup(() => {
       // Text colors
       primaryTextColor: '#f1f5f9',
       secondaryTextColor: '#cbd5e1',
+      textColor: '#f1f5f9',
       
       // Border colors
       primaryBorderColor: '#3b82f6',
@@ -28,7 +26,6 @@ export default defineMermaidSetup(() => {
       
       // Line colors
       lineColor: '#8b5cf6',
-      textColor: '#f1f5f9',
       
       // Sequence diagram
       actorBkg: '#1e293b',
@@ -52,33 +49,37 @@ export default defineMermaidSetup(() => {
       cScale1: '#8b5cf6',
       cScale2: '#10b981',
       
-      // Font sizes
-      fontSize: '14px',
+      // Font sizes (уменьшено еще больше для больших диаграмм)
+      fontSize: '7px',  // уменьшили для sequence диаграмм
     },
     flowchart: {
       useMaxWidth: false,
       htmlLabels: true,
       curve: 'basis',
-      padding: 15,
-      nodeSpacing: 50,
-      rankSpacing: 50,
-      diagramPadding: 10,
+      padding: 6,           // еще уменьшили с 9
+      nodeSpacing: 25,     // еще уменьшили с 30
+      rankSpacing: 25,     // еще уменьшили с 30
+      diagramPadding: 4,   // еще уменьшили с 6
     },
     sequence: {
-      diagramMarginX: 20,
-      diagramMarginY: 10,
-      actorMargin: 50,
-      width: 150,
-      height: 60,
-      boxMargin: 8,
-      boxTextMargin: 5,
-      noteMargin: 10,
-      messageMargin: 30,
+      diagramMarginX: 12,    // увеличили горизонтальные отступы (шире)
+      diagramMarginY: 0,     // НУЛЕВЫЕ вертикальные отступы
+      actorMargin: 40,       // УВЕЛИЧИЛИ расстояние между актерами (шире, чтобы текст помещался)
+      width: 150,           // УВЕЛИЧИЛИ ширину актеров (было 120, теперь еще шире для одной строки)
+      height: 25,           // УВЕЛИЧИЛИ высоту актеров (было 10, теперь повыше)
+      boxMargin: 2,       // минимальные отступы
+      boxTextMargin: 0,   // минимальные отступы текста
+      noteMargin: 2,      // МИНИМАЛЬНЫЕ заметки
+      messageMargin: 0.8,   // ЕЩЕ БОЛЬШЕ сжали расстояние между сообщениями!
       mirrorActors: true,
-      bottomMarginAdj: 1,
-      useMaxWidth: false,
+      bottomMarginAdj: 2,    // НУЛЕВОЙ нижний отступ
+      useMaxWidth: true,     // автоматическое масштабирование
       rightAngles: false,
-      wrap: true,
+      // Размеры шрифтов согласно документации Mermaid
+      actorFontSize: 7,      // размер шрифта для актеров (было 14 по умолчанию)
+      messageFontSize: 7,    // размер шрифта для сообщений (было 16 по умолчанию)
+      noteFontSize: 7,       // размер шрифта для заметок (было 14 по умолчанию)
+      wrap: false,          // ОТКЛЮЧИЛИ перенос текста - текст в одну строку!
     },
     gantt: {
       useMaxWidth: true,

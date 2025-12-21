@@ -24,6 +24,9 @@ FROM nginx:alpine
 # Копируем собранные файлы
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Копируем конфигурацию nginx для SPA роутинга
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Экспонируем порт
 EXPOSE 80
 

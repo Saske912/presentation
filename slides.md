@@ -164,11 +164,13 @@ graph TB
 - Внутренний DNS сервер
 - RFC2136 динамические обновления
 - TSIG ключи для безопасности
+- CI\CD управление кастомными DNS записями
 
 ### External DNS
 - Автоматическая синхронизация DNS записей
 - Интеграция с Kubernetes Services и Ingress
 - Поддержка FQDN template
+
 
 ---
 
@@ -215,8 +217,8 @@ sequenceDiagram
     participant BIND9 as BIND9 DNS
     participant Client as Client
     
-    Dev->>K8s: Create LoadBalancer Service
-    K8s->>ExtDNS: Service detected
+    Dev->>K8s: Create LB Service/Ingress
+    K8s->>ExtDNS: Resouce detected
     ExtDNS->>BIND9: RFC2136 DNS Update
     BIND9->>BIND9: Add A record
     ExtDNS->>K8s: DNS record created
@@ -229,9 +231,9 @@ sequenceDiagram
 
 ---
 
-# TLS Certificate Flow
+### TLS Certificate Flow
 
-<!-- ## Public Certificates (Let's Encrypt) -->
+##### Public Certificates (Let's Encrypt)
 
 ```mermaid
 sequenceDiagram
@@ -259,8 +261,11 @@ sequenceDiagram
     Client->>Ingress: HTTPS Request
     Ingress->>Client: TLS Response<br/>(Valid Let's Encrypt cert)
 ```
+---
 
-<!-- ## Internal Certificates (Self-Signed CA)
+### TLS Certificate Flow
+
+##### Internal Certificates (Self-Signed CA)
 
 ```mermaid
 sequenceDiagram
@@ -283,7 +288,7 @@ sequenceDiagram
     Note over Client,Ingress: HTTPS Connection
     Client->>Ingress: HTTPS Request<br/>(internal.domain.local)
     Ingress->>Client: TLS Response<br/>(Self-signed cert,<br/>requires CA trust)
-``` -->
+```
 
 ---
 
@@ -291,15 +296,59 @@ sequenceDiagram
 
 ## PostgreSQL
 
-- PostgreSQL Operator для управления базами данных
-- Поддержка PgBouncer для connection pooling
-- Отдельные базы для Grafana, Harbor и Boundary
+### CloudNativePG Operator
+- Современный PostgreSQL Operator для Kubernetes
+- Управление кластерами через Cluster CRD
+- Автоматическое создание и управление базами данных
+- Managed Roles для автоматического управления пользователями через Kubernetes Secrets
+
+### Архитектура кластера
+- **Primary и Replicas** - поддержка высокой доступности с автоматическим failover
+- **Типы сервисов**:
+  - `{cluster}-rw` - read-write (primary)
+  - `{cluster}-ro` - read-only (replicas)
+  - `{cluster}-pooler` - connection pooler
+
+---
+
+# Хранение данных
+
+## PostgreSQL
+
+### Управление базами данных
+- **Database CRD** - декларативное создание баз данных
+- Автоматическое создание пользователей через managed roles
+- Управление паролями через Kubernetes Secrets
+- Отдельные базы для Grafana, Harbor, Boundary, AWX
+
+### Connection Pooling
+- **PgBouncer Pooler** - опциональный connection pooler
+- Используется transaction pooling там, где возможно
+- Настраиваемое количество реплик pooler
+- Типы: rw (read-write), ro (read-only), r (read)
+
+---
+
+# Хранение данных
+
+## PostgreSQL
+
+### Резервное копирование
+- **Barman** - интеграция с S3-совместимым хранилищем
+- **ScheduledBackup** - автоматические бэкапы по расписанию (Cron)
+- WAL архивирование с сжатием
+- Retention policy для управления хранением
+- Бэкапы с предпочтением standby инстансов
+
+### Мониторинг и хранилище
+- **PodMonitor** - интеграция с Prometheus Operator
+- Метрики PostgreSQL для VictoriaMetrics/Grafana
 - Persistent volumes для данных
+- Настраиваемый StorageClass и масштабируемый размер
 
 ## Nexus3
 
 - Artifact Repository Manager
-- Docker registry
 - Maven, npm, PyPI repositories
 - S3 backend для blob storage
 - LDAP интеграция
@@ -312,17 +361,22 @@ sequenceDiagram
 
 - Enterprise-grade Docker и Helm registry
 - Trivy для сканирования образов
-- OIDC интеграция через Vault
+- OIDC интеграция через Vault с маппингом openldap групп
 - S3 backend для хранения образов
 - Helm ChartMuseum
 
-## Внешний MinIO S3
+---
+
+## Внешний MinIO S3O
 
 - **Внешний сервис** (не часть кластера)
 - Используется для:
   - Terraform state backend
   - Velero backups
   - Loki log storage
+  - Postgresql Backups
+  - Harbor registry
+  - Nexus3 repository
 
 ---
 
@@ -331,9 +385,8 @@ sequenceDiagram
 ## OpenLDAP
 
 - Централизованная аутентификация
-- Управление пользователями и группами
-- Интеграция с Vault, Forgejo, Nexus, Harbor, Boundary
-- Группы: `devops` (admin), `support` (read-only)
+- CI\CD процесс управления пользователями и группами
+- Deep интеграция с Vault - oidc клиенты получают группы и соответствующие права в других сервисах
 
 ---
 
@@ -345,6 +398,7 @@ sequenceDiagram
 - KV v2 secrets engine
 - LDAP authentication method
 - OIDC provider для SSO
+- SSH secret engine (ssh CA) работает в связке с Boundary
 - Интеграция с OpenLDAP
 - OIDC клиенты для: Harbor, Forgejo, Grafana, ArgoCD, Boundary
 - Kubernetes auth method для External Secrets Operator
@@ -359,7 +413,6 @@ sequenceDiagram
 - ClusterSecretStore для Vault
 - Kubernetes auth method
 - Periodic refresh секретов
-- Webhook для validation
 
 ---
 
@@ -368,9 +421,11 @@ sequenceDiagram
 ## Boundary
 
 - HashiCorp Boundary для безопасного доступа к инфраструктуре
+- Контроль сессий подключения
 - OIDC SSO через Vault
-- **SSH доступ** - безопасное подключение к серверам без управления ключами
-- **Database connection** - защищённые подключения к базам данных
+- Централизованная точка доступа на основе OpenLdap групп, которые привязаны к vault policies
+- **SSH доступ** - безопасное прокси подключение к серверам без управления ключами
+- **database доступ** - прокси для internal баз данных
 - Controller и Worker архитектура
 - PostgreSQL для хранения состояния
 - Интеграция с OpenLDAP через Vault OIDC
@@ -386,6 +441,66 @@ sequenceDiagram
 - Resource mutation
 - Background scanning
 - PolicyReports для анализа
+
+### Текущее состояние
+
+- **Режим работы:** Audit Mode (логирование нарушений без блокировки)
+- **Всего политик:** 12 активных политик безопасности
+- **Background scanning:** включен
+-  ✅ Pass:  844 проверок
+-  ❌ Fail:  151 нарушений
+
+---
+
+# Идентификация и безопасность
+
+## Kyverno: Pod Security Standards
+
+Политики безопасности на основе Pod Security Standards (все включены в Audit mode):
+
+- ✅ **Disallow Privileged Containers** - запрет privileged mode
+- ✅ **Disallow Host Namespaces** - запрет hostNetwork, hostPID, hostIPC
+- ✅ **Require Non-Root User** - требование runAsNonRoot: true
+- ✅ **Disallow hostPath Volumes** - запрет hostPath volumes
+- ✅ **Disallow Dangerous Capabilities** - запрет SYS_ADMIN, NET_ADMIN и др.
+- ✅ **Disallow hostPort** - запрет использования hostPort
+- ✅ **Disallow Privilege Escalation** - требование allowPrivilegeEscalation: false
+
+---
+
+# Идентификация и безопасность
+
+## Kyverno: Best Practices
+
+Политики best practices для улучшения качества развертываний:
+
+- ✅ **Require Resource Limits** - обязательные CPU и memory limits (Audit mode)
+- ✅ **Disallow Latest Tag** - запрет использования `:latest` тега (Audit mode)
+- ✅ **Require ImagePullPolicy** - enforce IfNotPresent или Never (Audit mode)
+- ✅ **Disallow Default Namespace** - запрет создания ресурсов в default namespace (Audit mode)
+- ⚪ **Require Labels** - обязательные labels (выключено, опционально)
+- ⚪ **Require Probes** - liveness и readiness probes (выключено, опционально)
+
+---
+
+# Идентификация и безопасность
+
+## Kyverno: Исключения Namespace
+
+Системные компоненты, требующие привилегий, исключаются из политик:
+
+- `kube-system`, `kube-public`, `kube-node-lease` - системные namespace Kubernetes
+- `kyverno` - сам Kyverno
+- `metallb-system` - MetalLB требует hostNetwork, hostPort
+- `ingress-nginx` - Ingress контроллеры могут требовать привилегий
+- `forgejo-runner` - Docker-in-Docker требует privileged mode
+- `local-path-storage` - Storage provisioner может требовать hostPath
+
+**Двухуровневая защита:**
+1. **Webhook level** - полное исключение из обработки на уровне admission webhook
+2. **Policy level** - каждая политика дополнительно проверяет исключения
+
+**Всего исключено:** 8 namespace
 
 ---
 
@@ -413,6 +528,7 @@ graph TB
         ARGOCD[ArgoCD<br/>GitOps<br/>OIDC]
         BOUNDARY[Boundary<br/>SSH/DB Access<br/>OIDC]
         ESO[External Secrets<br/>Operator<br/>K8s Auth]
+        AWX[AWX<br/>Configuration Management<br/>LDAP]
     end
     
     LDAP --> DEVOPS
@@ -430,6 +546,7 @@ graph TB
     ARGOCD --> VAULT
     BOUNDARY --> VAULT
     ESO --> VAULT
+    AWX --> LDAP
 ```
 
 ---
@@ -439,10 +556,9 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant User as User
-    participant App as Application<br/>(Forgejo/Nexus)
+    participant App as Application<br/>(Forgejo/Nexus/AWX)
     participant LDAP as OpenLDAP Server
     
-    Note over User,App: Direct LDAP Authentication
     User->>App: Login (username/password)
     App->>LDAP: BIND request with credentials
     LDAP->>LDAP: Verify credentials
@@ -482,7 +598,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant User as User
+    participant User as user with boundary desktop or CLI
     participant Boundary as Boundary Controller<br/>OIDC Auth
     participant Vault as HashiCorp Vault<br/>OIDC Provider
     participant Worker as Boundary Worker
@@ -502,6 +618,45 @@ sequenceDiagram
 
 ---
 
+### Kyverno Policy Enforcement Flow
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant K8s as Kubernetes API
+    participant Kyverno as Kyverno Webhook
+    participant Policy as ClusterPolicy
+    participant App as Application Pod
+    
+    Dev->>K8s: Create/Update Resource
+    K8s->>Kyverno: Admission Request
+    Kyverno->>Kyverno: Check namespace exclusion
+    
+    alt Namespace excluded
+        Kyverno->>K8s: Allow (bypass policies)
+    else Namespace not excluded
+        Kyverno->>Policy: Validate against policies
+        Policy->>Policy: Check security rules
+        
+        alt Policy violation
+            alt Audit Mode
+                Policy->>Kyverno: Log violation
+                Kyverno->>K8s: Allow (with warning)
+            else Enforce Mode
+                Policy->>Kyverno: Reject request
+                Kyverno->>K8s: Deny (block creation)
+                Kyverno->>Dev: Error message
+            end
+        else Policy compliant
+            Policy->>Kyverno: Validation passed
+            Kyverno->>K8s: Allow
+            K8s->>App: Resource created
+        end
+    end
+```
+
+---
+
 # Идентификация и безопасность
 
 ## Boundary Use Cases
@@ -514,7 +669,6 @@ sequenceDiagram
 
 ### Database Connection
 - Защищённые подключения к базам данных
-- Без необходимости хранения credentials в приложениях
 - Динамические credentials через Vault
 - Аудит всех database подключений
 
@@ -535,7 +689,6 @@ sequenceDiagram
 - CI/CD runners для Forgejo
 - Docker-in-Docker
 - Act runner для GitHub Actions-совместимых workflows
-- Поддержка различных runner labels
 
 ---
 
@@ -549,7 +702,6 @@ sequenceDiagram
 - Forgejo/Gitea интеграция
 - AppProjects для организации
 - Web UI + CLI
-- High Availability mode
 
 ---
 
@@ -558,10 +710,9 @@ sequenceDiagram
 ## Renovate
 
 - Автоматизация обновления зависимостей
-- Автообновление Docker images, Helm charts, Terraform, Java, Node
+- Автообновление Docker images, Helm charts, Java, Node
 - Интеграция с Forgejo
 - Dependency Dashboard
-- Группировка зависимостей
 
 ---
 
@@ -658,7 +809,7 @@ graph TB
 - Daily backup в 2:00 AM
 - Weekly backup в 3:00 AM (воскресенье)
 - Retention: 30 дней (daily), 60 дней (weekly)
-- Namespaces: vault, harbor, forgejo, nexus3, openldap
+- Namespaces: vault, harbor, forgejo, nexus3, openldap, postgresql, awx, dns-system
 
 ---
 
@@ -704,10 +855,6 @@ graph TB
 ```
 Базовая инфраструктура
   ↓
-├─→ BIND9 → External DNS
-├─→ MetalLB → Ingress Nginx
-├─→ Cert-Manager → Internal CA
-│
 ├─→ OpenLDAP
 │     ↓
 │   Vault (LDAP auth + OIDC)
@@ -732,17 +879,22 @@ graph TB
 ## Граф зависимостей (часть 2)
 
 ```
+├─→ BIND9 → External DNS
+├─→ MetalLB → Ingress Nginx
+│
 ├─→ PostgreSQL
 │     ↓
 │   ├─→ Grafana
 │   ├─→ Harbor
 │   └─→ Boundary
+│   └─→ AWX
 │
 ├─→ VictoriaMetrics Stack
 │     ↓
 │   Loki (интеграция в Grafana)
 │
 └─→ Kyverno (независимый)
+├─→ Cert-Manager (независимый)
 ```
 
 ---
@@ -752,11 +904,13 @@ graph TB
 ## Внешние сервисы
 
 ### External MinIO S3
-- **Не часть кластера**
 - Используется для:
   - Terraform/OpenTofu state backend
   - Velero backups storage
   - Loki chunks и ruler storage
+  - Postgresql backups storage
+  - Harbor image store
+  - Nexus blob store
 
 ### CloudFlare (опционально)
 - DNS-01 challenge для Let's Encrypt
@@ -802,6 +956,9 @@ graph TB
     subgraph "Policy Engine"
         KYVERNO[Kyverno<br/>Validation & Mutation]
         POLICIES[ClusterPolicies<br/>Security Rules]
+        POD_SECURITY[Pod Security Standards<br/>Baseline/Restricted]
+        BEST_PRACTICES[Best Practices<br/>Resource Limits, Tags]
+        EXCLUSIONS[Namespace Exclusions<br/>System Components]
     end
     
     %% Certificate flow
@@ -831,7 +988,12 @@ graph TB
     
     %% Policy
     KYVERNO --> POLICIES
-    POLICIES --> APPS
+    POLICIES --> POD_SECURITY
+    POLICIES --> BEST_PRACTICES
+    POLICIES --> EXCLUSIONS
+    POD_SECURITY --> APPS
+    BEST_PRACTICES --> APPS
+    EXCLUSIONS --> APPS
 ```
 
 ---

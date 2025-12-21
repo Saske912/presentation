@@ -3,7 +3,13 @@
     "@slidev/theme-default": "^0.25.0"
   },
   "devDependencies": {
+    "@slidev/cli": "^0.50.0",
     "playwright-chromium": "^1.56.1",
     "vite": "^7.2.2"
+  },
+  "scripts": {
+    "dev": "slidev slides.md",
+    "build": "slidev build slides.md",
+    "export": "slidev export slides.md"
   }
 }

@@ -4,15 +4,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Настраиваем npm для лучшей работы с сетью
-RUN npm config set registry https://registry.npmjs.org/ && \
-    npm config set fetch-retries 5 && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000
-
 # Устанавливаем зависимости
 COPY package.json package-lock.json ./
-RUN npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
+RUN npm install
 
 # Копируем исходные файлы
 COPY . .
@@ -20,6 +14,6 @@ COPY . .
 # Экспонируем порт для dev сервера (Slidev использует 3030 по умолчанию)
 EXPOSE 3030
 
-# Запускаем dev сервер
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Запускаем dev сервер используя npx
+CMD ["npx", "slidev", "slides.md", "--host", "0.0.0.0"]
 

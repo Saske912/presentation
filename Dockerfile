@@ -5,20 +5,17 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Устанавливаем Slidev CLI глобально
-RUN npm install -g @slidev/cli
-
 # Копируем файлы зависимостей
 COPY package.json package-lock.json ./
 
-# Устанавливаем зависимости
-RUN npm ci
+# Устанавливаем зависимости (используем install вместо ci для совместимости)
+RUN npm install
 
 # Копируем исходные файлы
 COPY . .
 
-# Собираем презентацию
-RUN slidev build slides.md
+# Собираем презентацию используя npx (не требует глобальной установки)
+RUN npx slidev build slides.md
 
 # Stage 2: Production
 FROM nginx:alpine

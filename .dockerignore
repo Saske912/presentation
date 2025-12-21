@@ -23,6 +23,7 @@ Thumbs.db
 # Documentation
 *.md
 !README.md
+!slides.md
 
 # Other
 .env

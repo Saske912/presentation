@@ -15,6 +15,7 @@ RUN npm install
 COPY . .
 
 # Собираем презентацию используя npx (не требует глобальной установки)
+# Slidev build создает статическую SPA версию
 RUN npx slidev build slides.md
 
 # Stage 2: Production

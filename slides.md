@@ -6,128 +6,148 @@ class: text-center
 highlighter: shiki
 lineNumbers: false
 info: |
-  ## Kubernetes Infrastructure Stack
-  Production-Ready Infrastructure as Code
+  ## Единая инфраструктурная платформа
+  Kubernetes + Docker Swarm для масштабируемых бизнес-решений
 drawings:
   persist: false
 transition: slide-left
-title: Kubernetes Infrastructure Stack
+title: Единая инфраструктурная платформа
 mdc: true
 contextMenu: false
 ---
 
-# Kubernetes Infrastructure Stack
+# Единая инфраструктурная платформа
 
-## Production-Ready Infrastructure as Code
+## Kubernetes + Docker Swarm
 
-**Полнофункциональный Kubernetes кластер**  
-**с автоматизацией DNS, TLS, CI/CD и мониторингом**
+**Централизованная Kubernetes-платформа**  
+**+ распределённые Swarm-кластеры для бизнес-приложений**
 
 ---
 
 # Содержание
 
-1. Введение и обзор
-2. Общая архитектура
-3. Базовая инфраструктура
-4. Хранение данных
-5. Идентификация и безопасность
-6. CI/CD платформа
-7. Мониторинг и логирование
-8. Backup и восстановление
-9. Зависимости и интеграции
-10. Заключение
+1. Введение и концепция
+2. Общая архитектура платформы
+3. Центральная Kubernetes-инфраструктура
+4. Rigspace Platform (Docker Swarm)
+5. Интеграция и взаимодействие
+6. Безопасность и управление доступом
+7. Мониторинг и наблюдаемость
+8. Эксплуатация и масштабирование
+9. Заключение
 
 ---
 
 # Введение
 
-## Цели проекта
+## Концепция платформы
 
-- **Infrastructure as Code** - полная автоматизация через Terraform/OpenTofu
-- **Zero-touch DNS** - автоматическое создание DNS записей
-- **Auto TLS** - автоматическая выдача и обновление сертификатов
-- **GitOps** - декларативное управление приложениями
-- **Observability** - полный мониторинг и логирование
-- **Security** - централизованная аутентификация и управление секретами
+**Двухуровневая архитектура:**
+
+- **Kubernetes** — центральная платформа управления
+  - Инфраструктурные сервисы (DNS, TLS, CI/CD, мониторинг)
+  - Централизованное управление идентификацией и секретами
+  - Единая точка наблюдения и логирования
+
+- **Docker Swarm** — бизнес-приложения на площадках
+  - Rigspace и другие платформы
+  - Распределённые кластеры для разных локаций
+  - Автономная работа с интеграцией в центральную платформу
 
 ---
 
-# Общая архитектура системы
+# Введение
+
+## Преимущества архитектуры
+
+### Для бизнеса
+- **Масштабируемость** — легко добавлять новые площадки
+- **Единые стандарты** — централизованные политики безопасности
+- **Наблюдаемость** — общая картина всех систем
+- **Надёжность** — изоляция площадок, централизованный backup
+
+### Для технических команд
+- **Автоматизация** — Infrastructure as Code, GitOps
+- **Безопасность** — централизованная аутентификация, управление секретами
+- **Мониторинг** — единая платформа для метрик и логов
+- **Упрощённое управление** — декларативная конфигурация
+
+---
+
+# Общая архитектура платформы
 
 ```mermaid
 graph TB
-    subgraph "Kubernetes Cluster"
-        subgraph "Control Plane"
-            CP[Control Plane<br/>Talos Linux]
-        end
-        
-        subgraph "Worker Nodes"
-            WN1[Worker Node 1<br/>Talos Linux]
-            WN2[Worker Node 2<br/>Talos Linux]
-        end
-        
+    subgraph "Central Kubernetes Platform"
         subgraph "Infrastructure Services"
-            BIND9[BIND9 DNS<br/>RFC2136]
-            EXT_DNS[External DNS<br/>Auto Records]
-            CERT_MGR[Cert-Manager<br/>Let's Encrypt]
-            METALLB[MetalLB<br/>Load Balancer]
-            INGRESS[Ingress Nginx<br/>Router]
-            CA[Internal CA<br/>Self-signed]
+            BIND9[BIND9 DNS]
+            CERT_MGR[Cert-Manager]
+            METALLB[MetalLB]
+            INGRESS[Ingress Nginx]
         end
         
         subgraph "Identity & Security"
-            LDAP[OpenLDAP<br/>Users/Groups]
-            VAULT[Vault<br/>Secrets & OIDC]
-            ESO[External Secrets<br/>Operator]
-            KYVERNO[Kyverno<br/>Policies]
-            BOUNDARY[Boundary<br/>SSH/DB Access]
+            LDAP[OpenLDAP]
+            VAULT[Vault]
+            ESO[External Secrets]
+            KYVERNO[Kyverno]
+            BOUNDARY[Boundary]
         end
         
-        subgraph "Storage & Databases"
-            PG[PostgreSQL<br/>Operator]
-            HARBOR[Harbor<br/>Registry]
-            NEXUS[Nexus3<br/>Artifacts]
+        subgraph "Storage & CI/CD"
+            PG[PostgreSQL]
+            HARBOR[Harbor Registry]
+            FORGEJO[Forgejo Git]
+            ARGOCD[ArgoCD GitOps]
         end
         
-        subgraph "CI/CD & GitOps"
-            FORGEJO[Forgejo<br/>Git]
-            ARGOCD[ArgoCD<br/>GitOps]
-            RENOVATE[Renovate<br/>Updates]
-        end
-        
-        subgraph "Monitoring"
-            VM[VictoriaMetrics<br/>Metrics]
-            LOKI[Loki<br/>Logs]
-            GRAFANA[Grafana<br/>Dashboards]
+        subgraph "Monitoring & Observability"
+            PROM[Prometheus]
+            THANOS[Thanos]
+            LOKI[Loki]
+            GRAFANA[Grafana]
         end
         
         subgraph "Backup"
-            VELERO[Velero<br/>Backups]
+            VELERO[Velero]
+        end
+    end
+    
+    subgraph "Docker Swarm Clusters"
+        subgraph "Swarm Site 1"
+            SWARM1[Docker Swarm<br/>Rigspace Platform]
+            TRAEFIK1[Traefik]
+            RIGSPACE1[Rigspace Services<br/>Auth, Admin, Monitoring]
+            STREAM1[Stream Service]
+            DB1[MariaDB, MongoDB<br/>Redis, ClickHouse]
+        end
+        
+        subgraph "Swarm Site 2"
+            SWARM2[Docker Swarm<br/>Rigspace Platform]
+            TRAEFIK2[Traefik]
+            RIGSPACE2[Rigspace Services]
+            STREAM2[Stream Service]
+            DB2[MariaDB, MongoDB<br/>Redis, ClickHouse]
         end
     end
     
     subgraph "External Services"
         EXT_MINIO[External MinIO S3<br/>State/Backups/Logs]
-        LETSENCRYPT[Let's Encrypt<br/>Public Certs]
-        INTERNAL_DNS_ZONE[Internal DNS Zone<br/>observ.local]
-        REAL_DNS_ZONE[Real DNS Zone<br/>support-tetra-soft.ru]
+        LETSENCRYPT[Let's Encrypt]
+        DNS_ZONES[DNS Zones]
     end
     
     subgraph "Infrastructure as Code"
         TERRAFORM[Terraform/OpenTofu]
-        HELM[Helm Charts]
     end
     
-    %% Infrastructure connections
-    EXT_DNS --> BIND9
-    BIND9 --> INTERNAL_DNS_ZONE
-    BIND9 --> REAL_DNS_ZONE
+    %% Central platform connections
+    BIND9 --> DNS_ZONES
     CERT_MGR --> LETSENCRYPT
-    CERT_MGR --> CA
     METALLB --> INGRESS
     
-    %% Identity & Auth
+    %% Identity flow
     LDAP --> VAULT
     VAULT --> ESO
     VAULT --> FORGEJO
@@ -136,22 +156,38 @@ graph TB
     VAULT --> ARGOCD
     VAULT --> BOUNDARY
     
-    %% Storage
-    PG --> GRAFANA
-    PG --> HARBOR
-    PG --> BOUNDARY
-    
-    %% Monitoring
-    VM --> GRAFANA
+    %% Monitoring connections to Swarm
+    PROM --> THANOS
+    THANOS --> GRAFANA
     LOKI --> GRAFANA
     LOKI --> EXT_MINIO
     
-    %% Backup
+    %% Swarm to Central integration
+    RIGSPACE1 -.->|Metrics| PROM
+    RIGSPACE1 -.->|Logs| LOKI
+    RIGSPACE2 -.->|Metrics| PROM
+    RIGSPACE2 -.->|Logs| LOKI
+    
+    %% Swarm internal
+    TRAEFIK1 --> RIGSPACE1
+    TRAEFIK1 --> STREAM1
+    RIGSPACE1 --> DB1
+    STREAM1 --> DB1
+    
+    TRAEFIK2 --> RIGSPACE2
+    TRAEFIK2 --> STREAM2
+    RIGSPACE2 --> DB2
+    STREAM2 --> DB2
+    
+    %% Backup and storage
     VELERO --> EXT_MINIO
+    HARBOR --> EXT_MINIO
+    PG --> EXT_MINIO
     
     %% IaC
     TERRAFORM --> EXT_MINIO
-    TERRAFORM --> HELM
+    TERRAFORM --> SWARM1
+    TERRAFORM --> SWARM2
 ```
 
 ---
@@ -170,40 +206,6 @@ graph TB
 - Автоматическая синхронизация DNS записей
 - Интеграция с Kubernetes Services и Ingress
 - Поддержка FQDN template
-
-
----
-
-# Базовая инфраструктура
-
-## TLS Management
-
-### Cert-Manager
-- Автоматическое управление TLS сертификатами
-- DNS-01 challenge (BIND9, CloudFlare)
-- HTTP-01 challenge
-- Let's Encrypt интеграция
-
-### Internal CA
-- Внутренний Certificate Authority
-- Self-signed сертификаты для внутренних сервисов
-- ClusterIssuer для автоматической выдачи
-
----
-
-# Базовая инфраструктура
-
-## Load Balancing
-
-### MetalLB
-- LoadBalancer для bare-metal кластеров
-- L2 режим балансировки
-- Настраиваемый IP pool (172.15.172.210-225)
-
-### Ingress Nginx
-- HTTP/HTTPS маршрутизация
-- SSL/TLS termination
-- Интеграция с Cert-Manager для автоматических сертификатов
 
 ---
 
@@ -228,6 +230,68 @@ sequenceDiagram
     Client->>K8s: HTTP Request
     K8s->>Client: Response
 ```
+
+---
+
+# Базовая инфраструктура
+
+### DNS Records Self-Service Repository
+- **Отдельный CI/CD репозиторий** для управления DNS записями и SSH хостами
+- Единая структура данных для DNS, Boundary и AWX
+- **A записи** для хостов с IP адресами
+- **SRV записи** для service discovery (SSH, metrics)
+- **Группировка хостов** для Boundary host sets и AWX inventories
+- **Remote state интеграция** с основным репозиторием для Boundary/AWX конфигурации
+- GitOps workflow через Forgejo Actions
+
+---
+
+### DNS Records Self-Service Flow
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Git as Forgejo<br/>dns-records repo
+    participant CI as Forgejo Actions<br/>Terraform CI/CD
+    participant BIND9 as BIND9 DNS
+    participant Boundary as Boundary<br/>SSH Access
+    participant AWX as AWX<br/>Automation
+    participant RemoteState as Main Repo<br/>Remote State
+    
+    Note over Dev,Git: Self-Service DNS Management
+    Dev->>Git: Create PR with hosts config
+    Git->>CI: Trigger terraform plan
+    CI->>RemoteState: Read Boundary/AWX config
+    RemoteState->>CI: Return IDs and keys
+    CI->>CI: Validate configuration
+    CI->>Git: Show plan in PR comments
+    
+    Note over Dev,Git: Merge and Apply
+    Dev->>Git: Merge PR to main
+    Git->>CI: Trigger terraform apply
+    CI->>BIND9: Create A records (RFC2136)
+    CI->>BIND9: Create SRV records (service discovery)
+    CI->>Boundary: Create hosts, host sets, targets
+    CI->>AWX: Create hosts, groups, inventories
+    CI->>Git: Commit state changes
+```
+
+---
+
+# Базовая инфраструктура
+
+## TLS Management
+
+### Cert-Manager
+- Автоматическое управление TLS сертификатами
+- DNS-01 challenge (BIND9, CloudFlare)
+- HTTP-01 challenge
+- Let's Encrypt интеграция
+
+### Internal CA
+- Внутренний Certificate Authority
+- Self-signed сертификаты для внутренних сервисов
+- ClusterIssuer для автоматической выдачи
 
 ---
 
@@ -292,6 +356,22 @@ sequenceDiagram
 
 ---
 
+# Базовая инфраструктура
+
+## Load Balancing
+
+### MetalLB
+- LoadBalancer для bare-metal кластеров
+- L2 режим балансировки
+- Настраиваемый IP pool (172.15.172.210-225)
+
+### Ingress Nginx
+- HTTP/HTTPS маршрутизация
+- SSL/TLS termination
+- Интеграция с Cert-Manager для автоматических сертификатов
+
+---
+
 # Хранение данных
 
 ## PostgreSQL
@@ -342,7 +422,7 @@ sequenceDiagram
 
 ### Мониторинг и хранилище
 - **PodMonitor** - интеграция с Prometheus Operator
-- Метрики PostgreSQL для VictoriaMetrics/Grafana
+- Метрики PostgreSQL для Prometheus/Grafana
 - Persistent volumes для данных
 - Настраиваемый StorageClass и масштабируемый размер
 
@@ -367,19 +447,6 @@ sequenceDiagram
 
 ---
 
-## Внешний MinIO S3O
-
-- **Внешний сервис** (не часть кластера)
-- Используется для:
-  - Terraform state backend
-  - Velero backups
-  - Loki log storage
-  - Postgresql Backups
-  - Harbor registry
-  - Nexus3 repository
-
----
-
 # Идентификация и безопасность
 
 ## OpenLDAP
@@ -387,6 +454,25 @@ sequenceDiagram
 - Централизованная аутентификация
 - CI\CD процесс управления пользователями и группами
 - Deep интеграция с Vault - oidc клиенты получают группы и соответствующие права в других сервисах
+
+---
+
+## Direct LDAP Authentication
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant App as Application<br/>(Forgejo/Nexus/AWX)
+    participant LDAP as OpenLDAP Server
+    
+    User->>App: Login (username/password)
+    App->>LDAP: BIND request with credentials
+    LDAP->>LDAP: Verify credentials
+    LDAP->>App: Authentication success
+    LDAP->>App: Return user groups (devops/support)
+    App->>App: Map groups to roles
+    App->>User: Access granted with appropriate permissions
+```
 
 ---
 
@@ -405,102 +491,27 @@ sequenceDiagram
 
 ---
 
-# Идентификация и безопасность
+##### Vault OIDC Authentication Flow
 
-## External Secrets Operator
-
-- Автоматическая синхронизация секретов из Vault
-- ClusterSecretStore для Vault
-- Kubernetes auth method
-- Periodic refresh секретов
-
----
-
-# Идентификация и безопасность
-
-## Boundary
-
-- HashiCorp Boundary для безопасного доступа к инфраструктуре
-- Контроль сессий подключения
-- OIDC SSO через Vault
-- Централизованная точка доступа на основе OpenLdap групп, которые привязаны к vault policies
-- **SSH доступ** - безопасное прокси подключение к серверам без управления ключами
-- **database доступ** - прокси для internal баз данных
-- Controller и Worker архитектура
-- PostgreSQL для хранения состояния
-- Интеграция с OpenLDAP через Vault OIDC
-
----
-
-# Идентификация и безопасность
-
-## Kyverno
-
-- Kubernetes-native policy engine
-- Policy validation и enforcement
-- Resource mutation
-- Background scanning
-- PolicyReports для анализа
-
-### Текущее состояние
-
-- **Режим работы:** Audit Mode (логирование нарушений без блокировки)
-- **Всего политик:** 12 активных политик безопасности
-- **Background scanning:** включен
--  ✅ Pass:  844 проверок
--  ❌ Fail:  151 нарушений
-
----
-
-# Идентификация и безопасность
-
-## Kyverno: Pod Security Standards
-
-Политики безопасности на основе Pod Security Standards (все включены в Audit mode):
-
-- ✅ **Disallow Privileged Containers** - запрет privileged mode
-- ✅ **Disallow Host Namespaces** - запрет hostNetwork, hostPID, hostIPC
-- ✅ **Require Non-Root User** - требование runAsNonRoot: true
-- ✅ **Disallow hostPath Volumes** - запрет hostPath volumes
-- ✅ **Disallow Dangerous Capabilities** - запрет SYS_ADMIN, NET_ADMIN и др.
-- ✅ **Disallow hostPort** - запрет использования hostPort
-- ✅ **Disallow Privilege Escalation** - требование allowPrivilegeEscalation: false
-
----
-
-# Идентификация и безопасность
-
-## Kyverno: Best Practices
-
-Политики best practices для улучшения качества развертываний:
-
-- ✅ **Require Resource Limits** - обязательные CPU и memory limits (Audit mode)
-- ✅ **Disallow Latest Tag** - запрет использования `:latest` тега (Audit mode)
-- ✅ **Require ImagePullPolicy** - enforce IfNotPresent или Never (Audit mode)
-- ✅ **Disallow Default Namespace** - запрет создания ресурсов в default namespace (Audit mode)
-- ⚪ **Require Labels** - обязательные labels (выключено, опционально)
-- ⚪ **Require Probes** - liveness и readiness probes (выключено, опционально)
-
----
-
-# Идентификация и безопасность
-
-## Kyverno: Исключения Namespace
-
-Системные компоненты, требующие привилегий, исключаются из политик:
-
-- `kube-system`, `kube-public`, `kube-node-lease` - системные namespace Kubernetes
-- `kyverno` - сам Kyverno
-- `metallb-system` - MetalLB требует hostNetwork, hostPort
-- `ingress-nginx` - Ingress контроллеры могут требовать привилегий
-- `forgejo-runner` - Docker-in-Docker требует privileged mode
-- `local-path-storage` - Storage provisioner может требовать hostPath
-
-**Двухуровневая защита:**
-1. **Webhook level** - полное исключение из обработки на уровне admission webhook
-2. **Policy level** - каждая политика дополнительно проверяет исключения
-
-**Всего исключено:** 8 namespace
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant OIDCApp as OIDC App<br/>(Harbor/Grafana/ArgoCD/Boundary)
+    participant Vault as HashiCorp Vault<br/>OIDC Provider
+    participant LDAP as OpenLDAP Server
+    
+    Note over User,OIDCApp: Vault OIDC Authentication Flow
+    User->>OIDCApp: Access request
+    OIDCApp->>Vault: Redirect to OIDC login
+    User->>Vault: Login with LDAP credentials
+    Vault->>LDAP: Verify credentials
+    LDAP->>Vault: User authenticated + groups
+    Vault->>Vault: Apply policies based on groups
+    Vault->>Vault: Generate OIDC token with groups
+    Vault->>OIDCApp: Return OIDC token
+    OIDCApp->>OIDCApp: Map groups to roles
+    OIDCApp->>User: Access granted with appropriate permissions
+```
 
 ---
 
@@ -551,46 +562,47 @@ graph TB
 
 ---
 
-## Direct LDAP Authentication
+# Идентификация и безопасность
 
-```mermaid
-sequenceDiagram
-    participant User as User
-    participant App as Application<br/>(Forgejo/Nexus/AWX)
-    participant LDAP as OpenLDAP Server
-    
-    User->>App: Login (username/password)
-    App->>LDAP: BIND request with credentials
-    LDAP->>LDAP: Verify credentials
-    LDAP->>App: Authentication success
-    LDAP->>App: Return user groups (devops/support)
-    App->>App: Map groups to roles
-    App->>User: Access granted with appropriate permissions
-```
+## External Secrets Operator
+
+- Автоматическая синхронизация секретов из Vault
+- ClusterSecretStore для Vault
+- Kubernetes auth method
+- Periodic refresh секретов
 
 ---
 
-##### Vault OIDC Authentication Flow
+# Идентификация и безопасность
 
-```mermaid
-sequenceDiagram
-    participant User as User
-    participant OIDCApp as OIDC App<br/>(Harbor/Grafana/ArgoCD/Boundary)
-    participant Vault as HashiCorp Vault<br/>OIDC Provider
-    participant LDAP as OpenLDAP Server
-    
-    Note over User,OIDCApp: Vault OIDC Authentication Flow
-    User->>OIDCApp: Access request
-    OIDCApp->>Vault: Redirect to OIDC login
-    User->>Vault: Login with LDAP credentials
-    Vault->>LDAP: Verify credentials
-    LDAP->>Vault: User authenticated + groups
-    Vault->>Vault: Apply policies based on groups
-    Vault->>Vault: Generate OIDC token with groups
-    Vault->>OIDCApp: Return OIDC token
-    OIDCApp->>OIDCApp: Map groups to roles
-    OIDCApp->>User: Access granted with appropriate permissions
-```
+## Boundary
+
+- HashiCorp Boundary для безопасного доступа к инфраструктуре
+- Контроль сессий подключения
+- OIDC SSO через Vault
+- Централизованная точка доступа на основе OpenLdap групп, которые привязаны к vault policies
+- **SSH доступ** - безопасное прокси подключение к серверам без управления ключами
+- **database доступ** - прокси для internal баз данных
+- Controller и Worker архитектура
+- PostgreSQL для хранения состояния
+- Интеграция с OpenLDAP через Vault OIDC
+
+---
+
+# Идентификация и безопасность
+
+## Boundary Use Cases
+
+### SSH Access
+- Безопасный доступ к серверам без управления SSH ключами
+- Централизованное управление доступом
+- Аудит всех SSH сессий
+- Временные сессии с автоматическим истечением
+
+### Database Connection
+- Защищённые подключения к базам данных
+- Динамические credentials через Vault
+- Аудит всех database подключений
 
 ---
 
@@ -615,6 +627,56 @@ sequenceDiagram
     Worker->>User: Proxy connection
     User->>Target: Access via Boundary proxy
 ```
+
+---
+
+# Идентификация и безопасность
+
+## Kyverno
+
+- Kubernetes-native policy engine
+- Policy validation и enforcement
+- Resource mutation
+- Background scanning
+- PolicyReports для анализа
+
+### Текущее состояние
+
+- **Режим работы:** Audit Mode (логирование нарушений без блокировки)
+- **Всего политик:** 12 активных политик безопасности
+- **Background scanning:** включен
+- Автоматическая проверка всех ресурсов на соответствие политикам безопасности
+
+---
+
+# Идентификация и безопасность
+
+## Kyverno: Pod Security Standards
+
+Политики безопасности на основе Pod Security Standards (все включены в Audit mode):
+
+- ✅ **Disallow Privileged Containers** - запрет privileged mode
+- ✅ **Disallow Host Namespaces** - запрет hostNetwork, hostPID, hostIPC
+- ✅ **Require Non-Root User** - требование runAsNonRoot: true
+- ✅ **Disallow hostPath Volumes** - запрет hostPath volumes
+- ✅ **Disallow Dangerous Capabilities** - запрет SYS_ADMIN, NET_ADMIN и др.
+- ✅ **Disallow hostPort** - запрет использования hostPort
+- ✅ **Disallow Privilege Escalation** - требование allowPrivilegeEscalation: false
+
+---
+
+# Идентификация и безопасность
+
+## Kyverno: Best Practices
+
+Политики best practices для улучшения качества развертываний:
+
+- ✅ **Require Resource Limits** - обязательные CPU и memory limits (Audit mode)
+- ✅ **Disallow Latest Tag** - запрет использования `:latest` тега (Audit mode)
+- ✅ **Require ImagePullPolicy** - enforce IfNotPresent или Never (Audit mode)
+- ✅ **Disallow Default Namespace** - запрет создания ресурсов в default namespace (Audit mode)
+- ⚪ **Require Labels** - обязательные labels (выключено, опционально)
+- ⚪ **Require Probes** - liveness и readiness probes (выключено, опционально)
 
 ---
 
@@ -657,20 +719,108 @@ sequenceDiagram
 
 ---
 
-# Идентификация и безопасность
+# Rigspace Platform (Docker Swarm)
 
-## Boundary Use Cases
+## Обзор
 
-### SSH Access
-- Безопасный доступ к серверам без управления SSH ключами
-- Централизованное управление доступом
-- Аудит всех SSH сессий
-- Временные сессии с автоматическим истечением
+**Rigspace** — комплексная микросервисная платформа для нефтегазовой отрасли
 
-### Database Connection
-- Защищённые подключения к базам данных
-- Динамические credentials через Vault
-- Аудит всех database подключений
+- Обработка данных скважин в реальном времени
+- Мониторинг и аналитика оборудования
+- Генерация отчётов и документов
+- Развёрнута на **Docker Swarm** кластерах
+- Управляется через **Terraform**
+
+---
+
+# Rigspace Platform
+
+## Архитектура платформы
+
+**Слоистая архитектура:**
+
+1. **Ingress** — Traefik (reverse proxy, TLS termination)
+2. **Config** — Spring Cloud Config Server (централизованная конфигурация)
+3. **Core Services** — бизнес-логика (Auth, Admin, Monitoring, Analytics, Reporting, Drive)
+4. **Stream** — обработка потоковых данных со скважин
+5. **Databases** — MariaDB, MongoDB, Redis, ClickHouse, Elasticsearch
+6. **Message Queues** — NATS, RabbitMQ
+7. **Monitoring** — Prometheus, Grafana, Loki, Tempo
+
+---
+
+# Интеграция Kubernetes ↔ Swarm
+
+## Взаимодействие платформ
+
+### Централизованные сервисы для Swarm-кластеров
+
+**Kubernetes предоставляет:**
+
+- **Мониторинг** — Prometheus и Loki собирают метрики и логи из Swarm
+- **Логирование** — централизованное хранение в S3 через Loki
+- **CI/CD** — Forgejo и OpenTofu для управления конфигурацией Swarm
+- **Безопасность** — Vault для управления секретами, Boundary для доступа
+- **DNS** — BIND9 для единого DNS-пространства
+- **TLS** — централизованное управление сертификатами
+
+---
+
+# Интеграция Kubernetes ↔ Swarm
+
+## Потоки данных
+
+```mermaid
+graph TB
+    subgraph "Docker Swarm Cluster"
+        SWARM_SERVICES[Rigspace Services]
+        SWARM_LOGS[Application Logs]
+        SWARM_METRICS[Prometheus Metrics]
+    end
+    
+    subgraph "Central Kubernetes Platform"
+        LOKI[Loki<br/>Log Aggregation]
+        PROM[Prometheus<br/>Metrics Storage]
+        THANOS[Thanos<br/>Long-term Storage]
+        GRAFANA[Grafana<br/>Visualization]
+        VAULT[Vault<br/>Secrets]
+        FORGEJO[Forgejo<br/>Git/CI]
+    end
+    
+    subgraph "External Storage"
+        S3[MinIO S3<br/>Backups/Logs]
+    end
+    
+    SWARM_LOGS -->|Log Collection| LOKI
+    SWARM_METRICS -->|Metrics Export| PROM
+    PROM --> THANOS
+    LOKI --> GRAFANA
+    THANOS --> GRAFANA
+    LOKI --> S3
+    THANOS --> S3
+    
+    SWARM_SERVICES -->|Secrets Sync| VAULT
+    SWARM_SERVICES -->|Config Management| FORGEJO
+```
+
+---
+
+# Интеграция Kubernetes ↔ Swarm
+
+## Преимущества интеграции
+
+### Единая точка управления
+
+- **Наблюдаемость** — все метрики и логи в одном месте (Grafana)
+- **Безопасность** — централизованная аутентификация через Vault/LDAP
+- **Автоматизация** — Infrastructure as Code через Terraform
+- **Backup** — единая стратегия резервного копирования в S3
+
+### Изоляция и автономность
+
+- **Независимость площадок** — каждый Swarm-кластер работает автономно
+- **Отказоустойчивость** — падение одной площадки не влияет на другие
+- **Масштабируемость** — легко добавлять новые площадки
 
 ---
 
@@ -689,6 +839,17 @@ sequenceDiagram
 - CI/CD runners для Forgejo
 - Docker-in-Docker
 - Act runner для GitHub Actions-совместимых workflows
+
+## DNS Records Self-Service Repository
+
+- **Отдельный Git репозиторий** для управления DNS записями и SSH хостами
+- **GitOps workflow** через Forgejo Actions
+- **Единая структура данных** - один источник истины для DNS, Boundary и AWX
+- **A записи** - автоматическое создание DNS записей для хостов
+- **SRV записи** - service discovery для SSH, metrics и других сервисов
+- **Группировка хостов** - автоматическое создание Boundary host sets и AWX inventories по группам
+- **Remote state интеграция** - получение Boundary/AWX конфигурации из основного репозитория
+- **Terraform провайдеры** - hashicorp/dns, hashicorp/boundary, denouche/awx
 
 ---
 
@@ -718,78 +879,82 @@ sequenceDiagram
 
 # Мониторинг и логирование
 
-## VictoriaMetrics Stack
+## Единая платформа наблюдаемости
 
-### Компоненты:
-- **VMSingle** - хранение метрик (50Gi по умолчанию)
-- **VMAgent** - сбор метрик из кластера
-- **VMAlert** - alerting rules
-- **Grafana** - визуализация с OIDC интеграцией
+### Централизованный сбор данных
 
-### Возможности:
-- Предустановленные Kubernetes dashboards
-- Node Exporter и kube-state-metrics
-- ServiceMonitor для автоматического discovery
-- Интеграция с Loki для log correlation
+**Prometheus + Thanos Stack:**
+- **Prometheus** — сбор и хранение метрик из Kubernetes и Swarm-кластеров
+- **Thanos** — долгосрочное хранение метрик, глобальный запрос
+- **Alertmanager** — правила алертинга и уведомления
+- **Grafana** — визуализация с OIDC интеграцией
+
+**Loki Stack:**
+- **Loki** — индексирование и хранение логов
+- **Promtail** — сбор логов из Kubernetes (DaemonSet)
+- **Alloy/Prometheus** — сбор логов и метрик из Swarm-кластеров
+- **Gateway** — load balancing
 
 ---
 
 # Мониторинг и логирование
 
-## Loki Stack
+## Единая платформа наблюдаемости
 
-### Компоненты:
-- **Loki** - индексирование и хранение логов
-- **Promtail** - DaemonSet для автоматического сбора логов
-- **Gateway** - load balancing
-
-### Возможности:
-- S3 backend (внешний MinIO) для хранения
-- Retention: 30 дней (настраивается)
-- Интеграция с Grafana (автоматический datasource)
-- LogQL для мощных запросов
-- Log correlation с метриками
+### Преимущества:
+- Единая точка визуализации для всех платформ
+- Корреляция метрик и логов
+- Централизованное хранение в S3
 
 ---
 
-# Monitoring Flow
+# Мониторинг и логирование
+
+## Поток данных мониторинга
 
 ```mermaid
 graph TB
-    subgraph "Data Collection"
-        LOGS[Application Logs]
-        METRICS[System Metrics]
-        EVENTS[Kubernetes Events]
-    end
-    
-    subgraph "Processing"
+    subgraph "Kubernetes Cluster"
+        K8S_LOGS[K8s Application Logs]
+        K8S_METRICS[K8s System Metrics]
         PROMTAIL[Promtail<br/>Log Collection]
-        VMAGENT[VMAgent<br/>Metric Collection]
-        ALERT[VMAlert<br/>Alerting]
+        PROM_K8S[Prometheus<br/>Metric Collection]
     end
     
-    subgraph "Storage"
-        VMSINGLE[VMSingle<br/>Time Series DB]
+    subgraph "Docker Swarm Clusters"
+        SWARM_LOGS[Swarm Application Logs<br/>Rigspace Services]
+        SWARM_METRICS[Swarm Metrics<br/>Prometheus Exporters]
+        ALLOY[Alloy/Prometheus<br/>Collection Agent]
+    end
+    
+    subgraph "Central Storage"
+        PROM[Prometheus<br/>Time Series DB]
+        THANOS[Thanos<br/>Long-term Storage]
         LOKI[Loki<br/>Log Storage]
         EXT_MINIO[External MinIO<br/>S3 Backend]
     end
     
     subgraph "Visualization"
-        GRAFANA[Grafana<br/>Dashboards]
-        ALERTS[Alert Manager]
+        GRAFANA[Grafana<br/>Unified Dashboards]
+        ALERTMANAGER[Alertmanager<br/>Alerting]
     end
     
-    LOGS --> PROMTAIL
-    METRICS --> VMAGENT
-    EVENTS --> ALERT
+    K8S_LOGS --> PROMTAIL
+    K8S_METRICS --> PROM_K8S
+    SWARM_LOGS --> ALLOY
+    SWARM_METRICS --> ALLOY
     
     PROMTAIL --> LOKI
-    VMAGENT --> VMSINGLE
-    ALERT --> ALERTS
+    PROM_K8S --> PROM
+    ALLOY --> LOKI
+    ALLOY --> PROM
     
+    PROM --> THANOS
+    THANOS --> EXT_MINIO
     LOKI --> EXT_MINIO
-    VMSINGLE --> GRAFANA
+    THANOS --> GRAFANA
     LOKI --> GRAFANA
+    PROM --> ALERTMANAGER
 ```
 
 ---
@@ -889,7 +1054,14 @@ graph TB
 │   └─→ Boundary
 │   └─→ AWX
 │
-├─→ VictoriaMetrics Stack
+├─→ DNS Records Repo (dns-records)
+│     ↓
+│   ├─→ BIND9 (A/SRV records)
+│   ├─→ Boundary (SSH hosts, host sets)
+│   └─→ AWX (hosts, inventories)
+│   (Remote state ← Main Repo)
+│
+├─→ Prometheus + Thanos Stack
 │     ↓
 │   Loki (интеграция в Grafana)
 │
@@ -1010,16 +1182,21 @@ graph TB
     subgraph "State Management"
         EXT_MINIO[External MinIO<br/>S3 Backend]
         STATE[Terraform State]
+        DNS_STATE[DNS Records State]
     end
     
     subgraph "Deployment"
         TOFU[OpenTofu Apply]
         K8S[Kubernetes API]
+        DNS_TERRAFORM[DNS Records<br/>Terraform]
     end
     
     subgraph "Services"
         HELM[Helm Charts]
         APPS[Applications]
+        BIND9[BIND9 DNS]
+        BOUNDARY[Boundary]
+        AWX[AWX]
     end
     
     CODE --> TOFU
@@ -1029,59 +1206,152 @@ graph TB
     TOFU --> K8S
     K8S --> HELM
     HELM --> APPS
+    
+    DNS_TERRAFORM --> EXT_MINIO
+    EXT_MINIO --> DNS_STATE
+    DNS_TERRAFORM --> STATE
+    DNS_TERRAFORM --> BIND9
+    DNS_TERRAFORM --> BOUNDARY
+    DNS_TERRAFORM --> AWX
 ```
 
 ---
 
+# Эксплуатация и масштабирование
+
+## Управление платформой
+
+### Infrastructure as Code
+
+- **Terraform/OpenTofu** — единая точка управления всей инфраструктурой
+- **GitOps** — ArgoCD для автоматического развертывания
+- **Version Control** — все конфигурации в Git
+- **State Management** — централизованное хранение state в S3
+
+---
+
+# Эксплуатация и масштабирование
+
+### Масштабирование
+
+**Kubernetes-платформа:**
+- Горизонтальное масштабирование через увеличение реплик
+- Автоматическое масштабирование на основе метрик (опционально)
+
+**Swarm-площадки:**
+- Добавление новых площадок через Terraform
+- Независимое масштабирование каждой площадки
+- Репликация сервисов внутри Swarm-кластера
+
+---
+
+# Эксплуатация и масштабирование
+
+## Backup и восстановление
+
+### Централизованная стратегия
+
+**Velero** — автоматизация backup для Kubernetes:
+- Scheduled backups (daily/weekly)
+- S3-совместимое хранилище (внешний MinIO)
+- Retention policy (30 дней daily, 60 дней weekly)
+
+**Swarm-кластеры:**
+- Резервное копирование volumes БД (MariaDB, MongoDB)
+- Конфигурации через Terraform state
+- Интеграция с центральной платформой backup
+
+---
+
+# Эксплуатация и масштабирование
+
+### Disaster Recovery
+
+- Единая точка восстановления через Velero
+- Terraform state для полного восстановления инфраструктуры
+- Изоляция площадок — падение одной не влияет на другие
+
+---
+
+# Эксплуатация и масштабирование
+
+## Мониторинг и алертинг
+
+### Единая платформа наблюдаемости
+
+**Grafana Dashboards:**
+- Kubernetes-кластер (метрики и логи)
+- Swarm-кластеры (метрики и логи Rigspace)
+- Бизнес-метрики и алерты
+
+**Alertmanager:**
+- Правила алертинга для всех компонентов
+- Интеграция с системами уведомлений
+- Корреляция метрик и логов
+
+**Преимущество:** Вся наблюдаемость в одном месте, независимо от платформы
+
+---
+
 # Заключение
 
-## Ключевые достижения
+## Ключевые достижения платформы
 
+### Центральная Kubernetes-платформа
 ✅ **Полная автоматизация** - DNS, TLS, развертывание  
 ✅ **Infrastructure as Code** - Terraform/OpenTofu  
 ✅ **GitOps** - ArgoCD для декларативного управления  
-✅ **Observability** - Метрики (VictoriaMetrics) + Логи (Loki)  
+✅ **Observability** - Единая платформа для метрик (Prometheus + Thanos) и логов (Loki)  
 ✅ **Security** - Policy engine (Kyverno) + Secret management (ESO + Vault)  
 ✅ **Backup** - Velero для disaster recovery  
-✅ **Automation** - Renovate для обновлений  
+
+### Интеграция с бизнес-приложениями
+✅ **Масштабируемость** - Легкое добавление новых Swarm-площадок  
+✅ **Централизованный мониторинг** - Все метрики и логи в одном месте  
+✅ **Единая безопасность** - Централизованная аутентификация для всех платформ  
+✅ **Автономность** - Независимая работа площадок с интеграцией в центр  
 
 ---
 
 # Заключение
 
-## Преимущества
+## Преимущества архитектуры
 
-### 🚀 Автоматизация
-- Zero-touch DNS
-- Auto TLS
-- Infrastructure as Code
+### Для бизнеса
+- **Масштабируемость** — легко добавлять новые площадки и сервисы
+- **Надёжность** — изоляция площадок, централизованный backup
+- **Единые стандарты** — централизованные политики безопасности
+- **Наблюдаемость** — общая картина всех систем в одном месте
 
-### 🔒 Безопасность
-- Централизованная аутентификация (LDAP + Vault)
-- Policy enforcement (Kyverno)
-- Secret management (ESO + Vault)
+### Для технических команд
+- **Автоматизация** — Infrastructure as Code, GitOps, Zero-touch DNS/TLS
+- **Безопасность** — централизованная аутентификация, управление секретами
+- **Мониторинг** — единая платформа для метрик и логов всех систем
+- **Упрощённое управление** — декларативная конфигурация через Terraform
 
 ---
 
 # Заключение
 
-## Преимущества
+## Архитектурные преимущества
 
-### 📈 Масштабируемость
-- Load Balancing
-- Централизованное управление
-- GitOps для быстрого развертывания
+### Двухуровневая модель
+- **Kubernetes** — центральная платформа для инфраструктурных сервисов
+- **Docker Swarm** — бизнес-приложения на распределённых площадках
+- **Интеграция** — единая точка мониторинга, безопасности и управления
 
-### 🛠️ Удобство разработки
-- Автоматические DNS имена
-- Простая маршрутизация
-- Декларативное управление
+### Гибкость и отказоустойчивость
+- Независимая работа площадок
+- Централизованное управление без жёсткой привязки
+- Масштабирование по требованию бизнеса
 
 ---
 
-# Production-Ready Infrastructure Stack
+# Production-Ready Infrastructure Platform
 
-**Готово к продакшену!** 🚀
+**Единая платформа для масштабируемых бизнес-решений** 🚀
+
+**Kubernetes + Docker Swarm = Гибкость + Надёжность + Масштабируемость**
 
 ---
 layout: center

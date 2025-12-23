@@ -59,6 +59,19 @@ contextMenu: false
 
 # Введение
 
+## Цели проекта
+
+- **Единая платформа** для инфраструктурных и бизнес-систем (Kubernetes + Swarm)
+- **Полная автоматизация**: DNS, TLS, развертывание, backup, мониторинг
+- **Безопасность по умолчанию**: централизованная аутентификация и управление секретами
+- **Наблюдаемость**: сквозной мониторинг и логирование для всех площадок
+- **Масштабируемость**: простое добавление новых площадок и сервисов
+- **Упрощение эксплуатации**: всё описано декларативно (Terraform/OpenTofu, GitOps)
+
+---
+
+# Введение
+
 ## Преимущества архитектуры
 
 ### Для бизнеса
@@ -239,10 +252,11 @@ sequenceDiagram
 - **Отдельный CI/CD репозиторий** для управления DNS записями и SSH хостами
 - Единая структура данных для DNS, Boundary и AWX
 - **A записи** для хостов с IP адресами
-- **SRV записи** для service discovery (SSH, metrics)
+- **SRV записи** для service discovery (SSH, metrics, monitoring targets)
 - **Группировка хостов** для Boundary host sets и AWX inventories
 - **Remote state интеграция** с основным репозиторием для Boundary/AWX конфигурации
 - GitOps workflow через Forgejo Actions
+- Используется как единый слой service discovery для Prometheus/Grafana, Boundary и AWX
 
 ---
 
@@ -440,10 +454,19 @@ sequenceDiagram
 ## Harbor
 
 - Enterprise-grade Docker и Helm registry
-- Trivy для сканирования образов
+- Встроенная проверка безопасности контейнерных образов через **Trivy**
+- Автоматическое сканирование артефактов и приоритезация уязвимостей (Critical / High / Medium)
 - OIDC интеграция через Vault с маппингом openldap групп
 - S3 backend для хранения образов
 - Helm ChartMuseum
+
+---
+
+![Harbor Trivy Security Dashboard](./trivy.png)
+
+- Централизованный дашборд уязвимостей по всем контейнерным образам
+- Топ наиболее опасных артефактов и CVE для фокусной отработки
+- Отдельная статистика по количеству уязвимостей и доле **fixable** проблем
 
 ---
 
@@ -649,76 +672,6 @@ sequenceDiagram
 
 ---
 
-# Идентификация и безопасность
-
-## Kyverno: Pod Security Standards
-
-Политики безопасности на основе Pod Security Standards (все включены в Audit mode):
-
-- ✅ **Disallow Privileged Containers** - запрет privileged mode
-- ✅ **Disallow Host Namespaces** - запрет hostNetwork, hostPID, hostIPC
-- ✅ **Require Non-Root User** - требование runAsNonRoot: true
-- ✅ **Disallow hostPath Volumes** - запрет hostPath volumes
-- ✅ **Disallow Dangerous Capabilities** - запрет SYS_ADMIN, NET_ADMIN и др.
-- ✅ **Disallow hostPort** - запрет использования hostPort
-- ✅ **Disallow Privilege Escalation** - требование allowPrivilegeEscalation: false
-
----
-
-# Идентификация и безопасность
-
-## Kyverno: Best Practices
-
-Политики best practices для улучшения качества развертываний:
-
-- ✅ **Require Resource Limits** - обязательные CPU и memory limits (Audit mode)
-- ✅ **Disallow Latest Tag** - запрет использования `:latest` тега (Audit mode)
-- ✅ **Require ImagePullPolicy** - enforce IfNotPresent или Never (Audit mode)
-- ✅ **Disallow Default Namespace** - запрет создания ресурсов в default namespace (Audit mode)
-- ⚪ **Require Labels** - обязательные labels (выключено, опционально)
-- ⚪ **Require Probes** - liveness и readiness probes (выключено, опционально)
-
----
-
-### Kyverno Policy Enforcement Flow
-
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant K8s as Kubernetes API
-    participant Kyverno as Kyverno Webhook
-    participant Policy as ClusterPolicy
-    participant App as Application Pod
-    
-    Dev->>K8s: Create/Update Resource
-    K8s->>Kyverno: Admission Request
-    Kyverno->>Kyverno: Check namespace exclusion
-    
-    alt Namespace excluded
-        Kyverno->>K8s: Allow (bypass policies)
-    else Namespace not excluded
-        Kyverno->>Policy: Validate against policies
-        Policy->>Policy: Check security rules
-        
-        alt Policy violation
-            alt Audit Mode
-                Policy->>Kyverno: Log violation
-                Kyverno->>K8s: Allow (with warning)
-            else Enforce Mode
-                Policy->>Kyverno: Reject request
-                Kyverno->>K8s: Deny (block creation)
-                Kyverno->>Dev: Error message
-            end
-        else Policy compliant
-            Policy->>Kyverno: Validation passed
-            Kyverno->>K8s: Allow
-            K8s->>App: Resource created
-        end
-    end
-```
-
----
-
 # Rigspace Platform (Docker Swarm)
 
 ## Обзор
@@ -762,7 +715,6 @@ sequenceDiagram
 - **CI/CD** — Forgejo и OpenTofu для управления конфигурацией Swarm
 - **Безопасность** — Vault для управления секретами, Boundary для доступа
 - **DNS** — BIND9 для единого DNS-пространства
-- **TLS** — централизованное управление сертификатами
 
 ---
 
@@ -812,9 +764,7 @@ graph TB
 ### Единая точка управления
 
 - **Наблюдаемость** — все метрики и логи в одном месте (Grafana)
-- **Безопасность** — централизованная аутентификация через Vault/LDAP
 - **Автоматизация** — Infrastructure as Code через Terraform
-- **Backup** — единая стратегия резервного копирования в S3
 
 ### Изоляция и автономность
 
@@ -839,6 +789,10 @@ graph TB
 - CI/CD runners для Forgejo
 - Docker-in-Docker
 - Act runner для GitHub Actions-совместимых workflows
+
+---
+
+# CI/CD платформа
 
 ## DNS Records Self-Service Repository
 
@@ -895,16 +849,6 @@ graph TB
 - **Alloy/Prometheus** — сбор логов и метрик из Swarm-кластеров
 - **Gateway** — load balancing
 
----
-
-# Мониторинг и логирование
-
-## Единая платформа наблюдаемости
-
-### Преимущества:
-- Единая точка визуализации для всех платформ
-- Корреляция метрик и логов
-- Централизованное хранение в S3
 
 ---
 
@@ -959,6 +903,13 @@ graph TB
 
 ---
 
+![Infrastructure metrics hosts](./metrics.png)
+
+- Prometheus использует SRV-записи для автоматического формирования scrape targets (node-exporter, blackbox и др.)
+- В Grafana реализован удобный выбор хоста по переменной, что упрощает анализ метрик по любому серверу
+
+---
+
 # Backup и восстановление
 
 ## Velero
@@ -1009,64 +960,6 @@ graph TB
     K8S2 --> BACKUP2
     BACKUP1 --> EXT_MINIO
     BACKUP2 --> EXT_MINIO
-```
-
----
-
-# Зависимости и интеграции
-
-## Граф зависимостей (часть 1)
-
-```
-Базовая инфраструктура
-  ↓
-├─→ OpenLDAP
-│     ↓
-│   Vault (LDAP auth + OIDC)
-│     ↓
-│   ├─→ Forgejo (OIDC/LDAP)
-│   │     ↓
-│   │   Forgejo Runner
-│   │     ↓
-│   │   Renovate
-│   │
-│   ├─→ Harbor (OIDC)
-│   ├─→ Grafana (OIDC)
-│   ├─→ ArgoCD (OIDC)
-│   ├─→ Boundary (OIDC)
-│   └─→ External Secrets Operator (K8s Auth)
-```
-
----
-
-# Зависимости и интеграции
-
-## Граф зависимостей (часть 2)
-
-```
-├─→ BIND9 → External DNS
-├─→ MetalLB → Ingress Nginx
-│
-├─→ PostgreSQL
-│     ↓
-│   ├─→ Grafana
-│   ├─→ Harbor
-│   └─→ Boundary
-│   └─→ AWX
-│
-├─→ DNS Records Repo (dns-records)
-│     ↓
-│   ├─→ BIND9 (A/SRV records)
-│   ├─→ Boundary (SSH hosts, host sets)
-│   └─→ AWX (hosts, inventories)
-│   (Remote state ← Main Repo)
-│
-├─→ Prometheus + Thanos Stack
-│     ↓
-│   Loki (интеграция в Grafana)
-│
-└─→ Kyverno (независимый)
-├─→ Cert-Manager (независимый)
 ```
 
 ---
@@ -1170,53 +1063,6 @@ graph TB
 
 ---
 
-# Infrastructure as Code Flow
-
-```mermaid
-graph TB
-    subgraph "Development"
-        CODE[Terraform Code]
-        TFVARS[terraform.tfvars]
-    end
-    
-    subgraph "State Management"
-        EXT_MINIO[External MinIO<br/>S3 Backend]
-        STATE[Terraform State]
-        DNS_STATE[DNS Records State]
-    end
-    
-    subgraph "Deployment"
-        TOFU[OpenTofu Apply]
-        K8S[Kubernetes API]
-        DNS_TERRAFORM[DNS Records<br/>Terraform]
-    end
-    
-    subgraph "Services"
-        HELM[Helm Charts]
-        APPS[Applications]
-        BIND9[BIND9 DNS]
-        BOUNDARY[Boundary]
-        AWX[AWX]
-    end
-    
-    CODE --> TOFU
-    TFVARS --> TOFU
-    TOFU --> EXT_MINIO
-    EXT_MINIO --> STATE
-    TOFU --> K8S
-    K8S --> HELM
-    HELM --> APPS
-    
-    DNS_TERRAFORM --> EXT_MINIO
-    EXT_MINIO --> DNS_STATE
-    DNS_TERRAFORM --> STATE
-    DNS_TERRAFORM --> BIND9
-    DNS_TERRAFORM --> BOUNDARY
-    DNS_TERRAFORM --> AWX
-```
-
----
-
 # Эксплуатация и масштабирование
 
 ## Управление платформой
@@ -1224,7 +1070,7 @@ graph TB
 ### Infrastructure as Code
 
 - **Terraform/OpenTofu** — единая точка управления всей инфраструктурой
-- **GitOps** — ArgoCD для автоматического развертывания
+- **GitOps** — Forgejo для автоматического развертывания
 - **Version Control** — все конфигурации в Git
 - **State Management** — централизованное хранение state в S3
 
@@ -1245,89 +1091,41 @@ graph TB
 
 ---
 
-# Эксплуатация и масштабирование
-
-## Backup и восстановление
-
-### Централизованная стратегия
-
-**Velero** — автоматизация backup для Kubernetes:
-- Scheduled backups (daily/weekly)
-- S3-совместимое хранилище (внешний MinIO)
-- Retention policy (30 дней daily, 60 дней weekly)
-
-**Swarm-кластеры:**
-- Резервное копирование volumes БД (MariaDB, MongoDB)
-- Конфигурации через Terraform state
-- Интеграция с центральной платформой backup
-
----
-
-# Эксплуатация и масштабирование
-
-### Disaster Recovery
-
-- Единая точка восстановления через Velero
-- Terraform state для полного восстановления инфраструктуры
-- Изоляция площадок — падение одной не влияет на другие
-
----
-
-# Эксплуатация и масштабирование
-
-## Мониторинг и алертинг
-
-### Единая платформа наблюдаемости
-
-**Grafana Dashboards:**
-- Kubernetes-кластер (метрики и логи)
-- Swarm-кластеры (метрики и логи Rigspace)
-- Бизнес-метрики и алерты
-
-**Alertmanager:**
-- Правила алертинга для всех компонентов
-- Интеграция с системами уведомлений
-- Корреляция метрик и логов
-
-**Преимущество:** Вся наблюдаемость в одном месте, независимо от платформы
-
----
-
 # Заключение
 
-## Ключевые достижения платформы
+## Ключевые выводы
 
 ### Центральная Kubernetes-платформа
-✅ **Полная автоматизация** - DNS, TLS, развертывание  
-✅ **Infrastructure as Code** - Terraform/OpenTofu  
-✅ **GitOps** - ArgoCD для декларативного управления  
-✅ **Observability** - Единая платформа для метрик (Prometheus + Thanos) и логов (Loki)  
-✅ **Security** - Policy engine (Kyverno) + Secret management (ESO + Vault)  
-✅ **Backup** - Velero для disaster recovery  
+✅ **Полная автоматизация** — DNS, TLS, развертывание  
+✅ **Infrastructure as Code** — Terraform/OpenTofu  
+✅ **GitOps** — Forgejo для декларативного управления  
+✅ **Observability** — единая платформа для метрик (Prometheus + Thanos) и логов (Loki)  
+✅ **Security** — policy engine (Kyverno) + secret management (ESO + Vault)  
+✅ **Backup** — Velero для disaster recovery  
 
 ### Интеграция с бизнес-приложениями
-✅ **Масштабируемость** - Легкое добавление новых Swarm-площадок  
-✅ **Централизованный мониторинг** - Все метрики и логи в одном месте  
-✅ **Единая безопасность** - Централизованная аутентификация для всех платформ  
-✅ **Автономность** - Независимая работа площадок с интеграцией в центр  
+✅ **Масштабируемость** — лёгкое добавление новых Swarm-площадок  
+✅ **Централизованный мониторинг** — все метрики и логи в одном месте  
+✅ **Единая безопасность** — централизованная аутентификация для всех платформ  
+✅ **Автономность** — независимая работа площадок с интеграцией в центр  
 
 ---
 
 # Заключение
 
-## Преимущества архитектуры
+## Ключевые выводы
 
-### Для бизнеса
-- **Масштабируемость** — легко добавлять новые площадки и сервисы
-- **Надёжность** — изоляция площадок, централизованный backup
-- **Единые стандарты** — централизованные политики безопасности
-- **Наблюдаемость** — общая картина всех систем в одном месте
+### Преимущества для бизнеса
+- **Масштабируемость** — легко добавлять новые площадки и сервисы  
+- **Надёжность** — изоляция площадок, централизованный backup  
+- **Единые стандарты** — централизованные политики безопасности  
+- **Наблюдаемость** — общая картина всех систем в одном месте  
 
-### Для технических команд
-- **Автоматизация** — Infrastructure as Code, GitOps, Zero-touch DNS/TLS
-- **Безопасность** — централизованная аутентификация, управление секретами
-- **Мониторинг** — единая платформа для метрик и логов всех систем
-- **Упрощённое управление** — декларативная конфигурация через Terraform
+### Преимущества для технических команд
+- **Автоматизация** — IaC, GitOps, Zero-touch DNS/TLS  
+- **Безопасность** — централизованная аутентификация, управление секретами  
+- **Мониторинг** — единая платформа для метрик и логов всех систем  
+- **Упрощённое управление** — декларативная конфигурация через Terraform  
 
 ---
 

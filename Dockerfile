@@ -30,5 +30,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Экспонируем порт
 EXPOSE 80
 
-# Запускаем nginx (ИСПРАВЛЕНО: аргумент в кавычках)
 CMD ["nginx", "-g", "daemon off;"]
